@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Products</title>
+    <!-- Using Bootstrap for quick styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Cafeteria Admin Panel</h1>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="adminTabs">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#menu-tab" type="button">Manage Menu</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reports-tab" type="button" onclick="loadReports()">Sales Reports</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <!-- TAB 1: MANAGE MENU (Existing Code) -->
+            <div class="tab-pane fade show active" id="menu-tab">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white">Add New Product</div>
+                    <div class="card-body">
+                        <form id="addProductForm">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <input type="text" id="pName" class="form-control" placeholder="Name" required>
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input type="number" id="pStock" class="form-control" placeholder="Stock" required>
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input type="number" id="pPrice" class="form-control" placeholder="Price" step="0.01" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <select id="pCategory" class="form-select">
+                                        <option value="Food">Food</option>
+                                        <option value="Drink">Drink</option>
+                                        <option value="Snack">Snack</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <button type="submit" class="btn btn-success w-100">Add Product</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">Current Menu</div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Category</th><th>Stock</th><th>Price</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="productTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: SALES REPORTS (New Code) -->
+            <div class="tab-pane fade" id="reports-tab">
+                <!-- Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card text-white bg-success mb-3">
+                            <div class="card-header">Total Revenue</div>
+                            <div class="card-body">
+                                <h2 class="card-title" id="totalRevenue">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card text-white bg-info mb-3">
+                            <div class="card-header">Total Orders Completed</div>
+                            <div class="card-body">
+                                <h2 class="card-title" id="totalOrders">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Table -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">Recent Completed Orders</div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Amount</th></tr>
+                            </thead>
+                            <tbody id="reportsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS for Tabs -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
