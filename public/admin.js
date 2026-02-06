@@ -1,122 +1,224 @@
 const socket = io();
 
-// 1. When a new order is placed...
+// Initial Load
+document.addEventListener('DOMContentLoaded', () => {
+    loadReports(); // Load dashboard stats immediately
+});
+
+// Socket Listeners
 socket.on('new_order', () => {
-    // A. Update the Sales Reports (Revenue goes up)
     loadReports();
-    
-    // B. Update the Menu List (Stock goes down)
-    loadProducts();
-    
-    // Optional: Play a "Ka-ching!" sound or show a toast notification
-    console.log("New Order Received! Dashboard Updated.");
+    // Only refresh products if we are looking at the menu to save bandwidth
+    if(document.getElementById('menu').classList.contains('active')) loadProducts();
 });
 
-// 2. When an order status changes (e.g., Kitchen marks as ready)...
-socket.on('order_status_updated', () => {
-    // We might want to refresh reports to show updated status
-    loadReports(); 
-});
-
-// 1. Fetch and Display Products on Load
-document.addEventListener('DOMContentLoaded', loadProducts);
-
+// --- 1. MENU LOGIC ---
 function loadProducts() {
     fetch('/api/products')
-        .then(response => response.json())
+        .then(res => res.json())
         .then(products => {
-            const tableBody = document.getElementById('productTableBody');
-            tableBody.innerHTML = ''; // Clear existing list
-
-            products.forEach(product => {
-                const row = `
+            const tbody = document.getElementById('productTableBody');
+            tbody.innerHTML = '';
+            products.forEach(p => {
+                tbody.innerHTML += `
                     <tr>
-                        <td>${product.id}</td>
-                        <td>${product.name}</td>
-                        <td><span class="badge bg-secondary">${product.category}</span></td>
-                        <td>${product.stock_quantity}</td> <!-- NEW FIELD -->
-                        <td>$${product.price}</td>
+                        <td><div class="fw-bold">${p.name}</div></td>
+                        <td><span class="badge bg-light text-dark border">${p.category}</span></td>
+                        <td>${p.stock_quantity}</td>
+                        <td>$${p.price}</td>
                         <td>
-                            <button class="btn btn-danger btn-sm" onclick="deleteProduct(${product.id})">Delete</button>
+                            <button class="btn btn-sm btn-light text-primary" onclick='openEditModal(${JSON.stringify(p)})'><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light text-danger" onclick="deleteProduct(${p.id})"><i class="bi bi-trash"></i></button>
                         </td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
+                    </tr>`;
             });
         });
 }
 
-// 2. Add New Product
-document.getElementById('addProductForm').addEventListener('submit', function(e) {
+document.getElementById('addProductForm').addEventListener('submit', (e) => {
     e.preventDefault();
-
-    const name = document.getElementById('pName').value;
-    const price = document.getElementById('pPrice').value;
-    const category = document.getElementById('pCategory').value;
-    const stock_quantity = document.getElementById('pStock').value;
-
+    const data = {
+        name: document.getElementById('pName').value,
+        stock_quantity: document.getElementById('pStock').value,
+        price: document.getElementById('pPrice').value,
+        category: document.getElementById('pCategory').value,
+        image_url: ''
+    };
     fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, category, stock_quantity, image_url: '' })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert('Product Added!');
+        body: JSON.stringify(data)
+    }).then(() => {
         document.getElementById('addProductForm').reset();
-        loadProducts(); // Refresh list
+        // Close collapse (Bootstrap 5 API)
+        new bootstrap.Collapse(document.getElementById('addProdCollapse')).hide();
+        loadProducts();
     });
 });
 
-// 3. Delete Product
 function deleteProduct(id) {
-    if(confirm('Are you sure you want to remove this item?')) {
-        fetch(`/api/products/${id}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(() => {
-                loadProducts(); // Refresh list
-            });
+    if(confirm('Delete this item?')) {
+        fetch(`/api/products/${id}`, { method: 'DELETE' }).then(() => loadProducts());
     }
 }
 
-// 4. Load Sales Reports
+// Edit Modal Logic
+let editModal;
+function openEditModal(p) {
+    document.getElementById('edit-id').value = p.id;
+    document.getElementById('edit-name').value = p.name;
+    document.getElementById('edit-price').value = p.price;
+    document.getElementById('edit-stock').value = p.stock_quantity;
+    document.getElementById('edit-category').value = p.category;
+    
+    editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+    editModal.show();
+}
+
+document.getElementById('editProductForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const data = {
+        name: document.getElementById('edit-name').value,
+        price: document.getElementById('edit-price').value,
+        stock_quantity: document.getElementById('edit-stock').value,
+        category: document.getElementById('edit-category').value
+    };
+    fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(() => {
+        editModal.hide();
+        loadProducts();
+    });
+});
+
+
+// --- 2. USER LOGIC ---
+function loadUsers() {
+    fetch('/api/users')
+        .then(res => res.json())
+        .then(users => {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td><span class="badge bg-primary">${u.role}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-light text-primary" onclick='openEditUserModal(${JSON.stringify(u)})'><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light text-danger" onclick="deleteUser(${u.id})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        });
+}
+
+// Edit User Modal Logic
+let editUserModalInstance;
+function openEditUserModal(user) {
+    document.getElementById('edit-user-id').value = user.id;
+    document.getElementById('edit-user-name').value = user.username;
+    document.getElementById('edit-user-role').value = user.role;
+    
+    editUserModalInstance = new bootstrap.Modal(document.getElementById('editUserModal'));
+    editUserModalInstance.show();
+}
+
+document.getElementById('editUserForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-user-id').value;
+    const data = {
+        username: document.getElementById('edit-user-name').value,
+        role: document.getElementById('edit-user-role').value
+    };
+    fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(() => {
+        editUserModalInstance.hide();
+        loadUsers();
+    });
+});
+
+document.getElementById('addUserForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = {
+        username: document.getElementById('uName').value,
+        password: document.getElementById('uPass').value, // plaintext for now
+        role: document.getElementById('uRole').value
+    };
+    fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(() => {
+        document.getElementById('addUserForm').reset();
+        loadUsers();
+    });
+});
+
+function deleteUser(id) {
+    if(confirm('Remove this user?')) fetch(`/api/users/${id}`, { method: 'DELETE' }).then(() => loadUsers());
+}
+
+
+// --- 3. REPORTS & DASHBOARD LOGIC ---
 function loadReports() {
     fetch('/api/reports')
         .then(res => res.json())
         .then(data => {
-            // 1. Convert string "10.50" to number 10.50
-            const revenue = parseFloat(data.revenue);
-            const orders = parseInt(data.total_orders);
+            // Update Dashboard Cards
+            document.getElementById('dashRevenue').innerText = '$' + (parseFloat(data.revenue) || 0).toFixed(2);
+            document.getElementById('dashOrders').innerText = data.total_orders || 0;
 
-            // 2. Safe check: if NaN (no sales yet), default to 0
-            const finalRevenue = isNaN(revenue) ? 0 : revenue;
-            const finalOrders = isNaN(orders) ? 0 : orders;
+            // Update Tables (Both Dashboard and Report Page use the same data structure)
+            const rows = data.recent_history.map(o => `
+                <tr>
+                    <td>#${o.id}</td>
+                    <td>${o.customer_name}</td>
+                    <td>${new Date(o.created_at).toLocaleDateString()}</td>
+                    <td class="fw-bold">$${parseFloat(o.total_amount).toFixed(2)}</td>
+                </tr>
+            `).join('');
 
-            // 3. Update UI
-            document.getElementById('totalRevenue').innerText = '$' + finalRevenue.toFixed(2);
-            document.getElementById('totalOrders').innerText = finalOrders;
-
-            // Update Table
-            const tbody = document.getElementById('reportsTableBody');
-            tbody.innerHTML = '';
+            // Populate both tables if they exist on the DOM
+            const dashTable = document.getElementById('dashboardRecentTable');
+            const reportTable = document.getElementById('reportsTableBody');
             
-            // Check if recent_history exists before looping
-            if (data.recent_history && data.recent_history.length > 0) {
-                data.recent_history.forEach(order => {
-                    const date = new Date(order.created_at).toLocaleString();
-                    const row = `
-                        <tr>
-                            <td>${order.id}</td>
-                            <td>${order.customer_name}</td>
-                            <td>${date}</td>
-                            <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No completed orders yet.</td></tr>';
-            }
-        })
-        .catch(err => console.error("Error loading reports:", err));
+            if(dashTable) dashTable.innerHTML = rows || '<tr><td colspan="4">No Data</td></tr>';
+            if(reportTable) reportTable.innerHTML = rows || '<tr><td colspan="4">No Data</td></tr>';
+        });
+}
+
+// --- 4. PDF GENERATION ---
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Sales Report", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+    // Summary
+    const rev = document.getElementById('dashRevenue').innerText;
+    const count = document.getElementById('dashOrders').innerText;
+    doc.text(`Total Revenue: ${rev} | Total Orders: ${count}`, 14, 40);
+
+    // Table
+    doc.autoTable({
+        startY: 50,
+        html: '#reportTableForPDF', // Targets the table ID in admin.html
+        theme: 'grid',
+        headStyles: { fillColor: [108, 93, 211] } // Purple color
+    });
+
+    doc.save('cafeteria_report.pdf');
 }

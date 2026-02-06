@@ -3,141 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafeteria - Cashier</title>
+    <title>Cashier POS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        .product-card { cursor: pointer; transition: transform 0.2s; }
-        .product-card:hover { transform: scale(1.05); border-color: #0d6efd; }
-        .cart-section { height: 90vh; overflow-y: auto; border-left: 1px solid #ddd; }
-
-        @media print {
-            /* Hide everything by default */
-            body * {
-                visibility: hidden;
-            }
-            /* Only show the printable area */
-            #printable-receipt, #printable-receipt * {
-                visibility: visible;
-            }
-            /* Position the receipt at the top left */
-            #printable-receipt {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                border: none !important; /* Remove borders for cleaner look */
-            }
-            /* Hide buttons on the printout */
-            .no-print {
-                display: none !important;
-            }
+        :root { --primary-color: #6C5DD3; --bg-color: #F3F4F6; }
+        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
+        /* Layout */
+        .sidebar {
+            width: 80px; height: 100vh; position: fixed; background: white;
+            display: flex; flex-direction: column; align-items: center; padding-top: 20px;
+            border-right: 1px solid #eee;
         }
+        .main-area { margin-left: 80px; margin-right: 350px; padding: 30px; height: 100vh; overflow-y: auto; }
+        .cart-sidebar {
+            width: 350px; height: 100vh; position: fixed; right: 0; top: 0;
+            background: white; border-left: 1px solid #eee; display: flex; flex-direction: column;
+        }
+
+        /* Nav Icons */
+        .nav-icon {
+            width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: #808191; font-size: 1.5rem; margin-bottom: 20px; transition: 0.3s; cursor: pointer;
+        }
+        .nav-icon.active, .nav-icon:hover { background-color: var(--primary-color); color: white; shadow: 0 4px 10px rgba(108, 93, 211, 0.3); }
+
+        /* Product Cards */
+        .product-card {
+            background: white; border-radius: 16px; border: none; transition: 0.2s;
+            cursor: pointer; overflow: hidden;
+        }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .product-img-placeholder { height: 120px; background: #e9ecef; display: flex; align-items: center; justify-content: center; color: #adb5bd; }
+        
+        /* Cart */
+        .cart-items { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #eee; }
+        .checkout-btn { background: var(--primary-color); border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; color: white; }
+        .checkout-btn:disabled { background: #ccc; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- LEFT SIDE: MENU -->
-            <div class="col-md-8 p-4">
-                <h2 class="mb-4">Select Items</h2>
-                <div id="product-list" class="row g-3">
-                    <!-- Products will inject here -->
-                </div>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="nav-icon active"><i class="bi bi-grid-fill"></i></div>
+        <div class="nav-icon" onclick="filterCategory('Food')"><i class="bi bi-egg-fried"></i></div>
+        <div class="nav-icon" onclick="filterCategory('Drink')"><i class="bi bi-cup-straw"></i></div>
+        <div class="nav-icon" onclick="filterCategory('Snack')"><i class="bi bi-cookie"></i></div>
+        <div class="mt-auto mb-3 nav-icon text-danger" onclick="logout()"><i class="bi bi-box-arrow-right"></i></div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div class="main-area">
+        <h3 class="fw-bold mb-4">Choose Order</h3>
+        <div id="product-list" class="row g-3">
+            <!-- Products injected here -->
+        </div>
+    </div>
+
+    <!-- CART SIDEBAR -->
+    <div class="cart-sidebar shadow-sm">
+        <div class="p-4 border-bottom">
+            <h4 class="fw-bold m-0">Current Order</h4>
+            <input type="text" id="customerName" class="form-control mt-3 border-0 bg-light" placeholder="Customer Name (Optional)">
+        </div>
+        
+        <div class="cart-items" id="cart-items">
+            <!-- Cart items injected here -->
+            <div class="text-center text-muted mt-5">
+                <i class="bi bi-basket3 fs-1"></i>
+                <p>Cart is empty</p>
             </div>
+        </div>
 
-            <!-- RIGHT SIDE: CART -->
-            <div class="col-md-4 bg-white cart-section p-4 shadow">
-                <h3 class="d-flex justify-content-between">
-                    Current Order 
-                    <span class="badge bg-primary rounded-pill" id="cart-count">0</span>
-                </h3>
-                <hr>
-                
-                <div class="mb-3">
-                    <label>Customer Name (Optional)</label>
-                    <input type="text" id="customerName" class="form-control" placeholder="Guest">
-                </div>
-
-                <!-- Cart Items List -->
-                <ul id="cart-items" class="list-group mb-3">
-                    <!-- Items go here -->
-                    <li class="list-group-item text-center text-muted">Cart is empty</li>
-                </ul>
-
-                <div class="d-flex justify-content-between fw-bold fs-5">
-                    <span>Total:</span>
-                    <span id="cart-total">$0.00</span>
-                </div>
-
-                <hr>
-                <button id="btn-checkout" class="btn btn-success w-100 py-2 fs-5" disabled>
-                    Place Order (Submit)
-                </button>
+        <div class="cart-footer">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Subtotal</span>
+                <span class="fw-bold" id="cart-total">$0.00</span>
             </div>
+            <button id="btn-checkout" class="checkout-btn" disabled>
+                Charge Payment
+            </button>
         </div>
     </div>
 
     <!-- RECEIPT MODAL -->
-    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="receiptModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header no-print">
-                    <h5 class="modal-title">Order Successful</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                
-                <!-- This is the part that gets printed -->
-                <div class="modal-body" id="printable-receipt">
+                <div class="modal-body p-4" id="printable-receipt">
                     <div class="text-center mb-3">
-                        <h3>Cafeteria Name</h3>
-                        <p>123 University Road</p>
-                        <hr>
-                        <h5>Receipt</h5>
+                        <h4 class="fw-bold">Cafeteria</h4>
+                        <p class="text-muted mb-0">Receipt</p>
+                        <small id="receipt-date"></small>
                     </div>
-                    
-                    <div id="receipt-details">
-                        <!-- Date & Order ID go here -->
-                    </div>
-                    
+                    <hr class="border-dashed">
+                    <div id="receipt-items-list" class="mb-3"></div>
                     <hr>
-                    <table class="table table-sm table-borderless">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th class="text-end">Qty</th>
-                                <th class="text-end">Price</th>
-                            </tr>
-                        </thead>
-                        <tbody id="receipt-items">
-                            <!-- Items go here -->
-                        </tbody>
-                    </table>
-                    <hr>
-                    
-                    <div class="d-flex justify-content-between fw-bold fs-4">
-                        <span>Total:</span>
-                        <span id="receipt-total">$0.00</span>
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>Total</span>
+                        <span id="receipt-total-disp">$0.00</span>
                     </div>
-                    
                     <div class="text-center mt-4">
-                        <p>Thank you for dining with us!</p>
-                        <small>Customer: <span id="receipt-customer"></span></small>
+                        <small class="text-muted">Customer: <span id="receipt-customer"></span></small><br>
+                        <strong>Thank You!</strong>
                     </div>
                 </div>
-
-                <div class="modal-footer no-print">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="window.print()">🖨 Print Receipt</button>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-4" onclick="downloadReceiptPDF()">📥 PDF</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" onclick="window.print()">🖨 Print</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- You need Bootstrap JS for the Modal to work -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="app.js"></script>
+    <script>
+        function logout() { sessionStorage.removeItem('user'); window.location.href = 'login.html'; }
+        
+        // Simple client-side filter
+        function filterCategory(cat) {
+            const cards = document.querySelectorAll('.col-product');
+            cards.forEach(card => {
+                if (card.dataset.cat === cat || !cat) card.style.display = 'block';
+                else card.style.display = 'none';
+            });
+        }
+    </script>
 </body>
 </html>

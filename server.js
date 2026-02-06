@@ -72,6 +72,21 @@ app.delete('/api/products/:id', (req, res) => {
     });
 });
 
+// --- API ROUTES FOR UPDATING PRODUCTS (MENU EDIT) ---
+app.put('/api/products/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, price, category, stock_quantity } = req.body;
+    
+    const sql = "UPDATE products SET name=?, price=?, category=?, stock_quantity=? WHERE id=?";
+    db.query(sql, [name, price, category, stock_quantity, id], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: 'Product updated successfully' });
+    });
+});
+
+
+
+
 // ORDERS
 app.post('/api/orders', (req, res) => {
     const { customer_name, items, total_amount } = req.body;
@@ -159,6 +174,11 @@ app.post('/api/orders', (req, res) => {
     });
 });
 
+
+
+
+
+
 // DASHBOARD
 // --- API ROUTES FOR KITCHEN ---
 app.get('/api/orders', (req, res) => {
@@ -216,6 +236,9 @@ app.put('/api/orders/:id', (req, res) => {
         res.json({ message: 'Status updated' });
     });
 });
+
+
+
 
 
 // REPORTS
@@ -294,6 +317,65 @@ app.get('/api/orders/history', (req, res) => {
         res.json(results);
     });
 });
+
+
+
+
+
+
+
+
+
+
+// --- API ROUTES FOR USER MANAGEMENT (CRUD) ---
+
+// Get All Users
+app.get('/api/users', (req, res) => {
+    const sql = "SELECT id, username, role, created_at FROM users";
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
+
+// Add New User
+app.post('/api/users', (req, res) => {
+    const { username, password, role } = req.body;
+    // Note: In production, hash the password here using bcrypt
+    const sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+    db.query(sql, [username, password, role], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: 'User created', id: result.insertId });
+    });
+});
+
+// Delete User
+app.delete('/api/users/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = "DELETE FROM users WHERE id = ?";
+    db.query(sql, [id], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: 'User deleted' });
+    });
+});
+
+// Update User (Edit)
+app.put('/api/users/:id', (req, res) => {
+    const { id } = req.params;
+    const { username, role } = req.body;
+    // Note: We are not updating password here to keep it simple, 
+    // but in a real app, you would handle password changes securely.
+    
+    const sql = "UPDATE users SET username = ?, role = ? WHERE id = ?";
+    db.query(sql, [username, role, id], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: 'User updated' });
+    });
+});
+
+
+
+
 
 
 

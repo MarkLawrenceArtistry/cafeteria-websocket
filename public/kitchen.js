@@ -2,32 +2,37 @@ const socket = io();
 const ordersContainer = document.getElementById('kitchen-orders');
 const notifySound = document.getElementById('notifySound');
 
-// 1. Load Existing Orders on Page Load
+// 1. Load Existing Orders
 document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/orders')
         .then(res => res.json())
         .then(orders => {
+            // Clear container first to prevent duplicates
+            ordersContainer.innerHTML = '';
+            // Reverse order to show newest first
             orders.forEach(order => renderOrderCard(order));
         });
 });
 
-// 2. Listen for NEW Orders (Real-Time!)
+// 2. Listen for NEW Orders
 socket.on('new_order', (order) => {
-    // Play sound
-    notifySound.play().catch(e => console.log("Audio play blocked by browser"));
-    
-    // Render the new card
+    notifySound.play().catch(e => console.log("Audio blocked"));
     renderOrderCard(order);
 });
 
-// 3. Listen for Status Updates (Optional: if multiple kitchen screens exist)
+// 3. Listen for Status Updates
 socket.on('order_status_updated', (data) => {
-    const card = document.getElementById(`order-${data.id}`);
-    if (card) {
+    const col = document.getElementById(`order-${data.id}`);
+    if (col) {
         if (data.status === 'completed') {
-            card.remove(); // Remove from screen
+            // Animate removal
+            col.style.transition = 'all 0.5s';
+            col.style.opacity = '0';
+            col.style.transform = 'scale(0.9)';
+            setTimeout(() => col.remove(), 500);
         } else {
-            updateCardStyle(card, data.status);
+            // Update UI for "Preparing"
+            updateCardStyle(col, data.status, data.id);
         }
     }
 });
@@ -35,74 +40,86 @@ socket.on('order_status_updated', (data) => {
 // --- HELPER FUNCTIONS ---
 
 function renderOrderCard(order) {
-    // Build the HTML for the Items list
     let itemsHtml = '';
     order.items.forEach(item => {
-        itemsHtml += `<li>${item.quantity}x <strong>${item.name}</strong></li>`;
+        itemsHtml += `
+            <div class="ticket-item">
+                <span class="fw-bold">${item.quantity}x ${item.name}</span>
+            </div>`;
     });
 
     const col = document.createElement('div');
-    col.className = 'col-md-4 col-lg-3 mb-4';
+    col.className = 'col-md-4 col-lg-3';
     col.id = `order-${order.id}`;
 
+    // Determine initial state
+    const isPending = order.status === 'pending';
+    const statusClass = isPending ? 'status-pending' : 'status-preparing';
+    const btnText = isPending ? 'Start Cooking' : 'Mark Ready';
+    const btnClass = isPending ? 'btn-primary' : 'btn-success';
+    const nextStatus = isPending ? 'preparing' : 'completed';
+
     col.innerHTML = `
-        <div class="card order-card shadow status-${order.status}">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>#${order.id} - ${order.customer_name}</strong>
-                <span class="badge bg-secondary">${new Date(order.created_at || Date.now()).toLocaleTimeString()}</span>
+        <div class="ticket-card ${statusClass} h-100">
+            <div class="ticket-header">
+                <span class="fw-bold">#${order.id}</span>
+                <small>${new Date(order.created_at || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
             </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-3">
-                    ${itemsHtml}
-                </ul>
-                <hr>
-                <div class="d-grid gap-2">
-                    ${order.status === 'pending' 
-                        ? `<button class="btn btn-primary btn-sm" onclick="updateStatus(${order.id}, 'preparing')">Start Cooking</button>` 
-                        : ''}
-                    
-                    <button class="btn btn-success btn-sm" onclick="updateStatus(${order.id}, 'completed')">Mark Ready</button>
-                </div>
+            <div class="ticket-body">
+                <div class="mb-2 text-muted small"><i class="bi bi-person"></i> ${order.customer_name}</div>
+                ${itemsHtml}
+            </div>
+            <div class="ticket-footer mt-auto">
+                <button id="btn-${order.id}" class="btn ${btnClass} btn-action" 
+                    onclick="updateStatus(${order.id}, '${nextStatus}')">
+                    ${btnText}
+                </button>
             </div>
         </div>
     `;
 
-    // Add to the START of the list
     ordersContainer.prepend(col);
 }
 
 function updateStatus(id, status) {
+    // Send update to server
     fetch(`/api/orders/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
     });
-    // The Socket event 'order_status_updated' will handle the UI update
+    // The socket listener above will handle the visual update
 }
 
-function updateCardStyle(cardElement, status) {
-    const card = cardElement.querySelector('.card');
-    card.className = `card order-card shadow status-${status}`;
+function updateCardStyle(colElement, status, id) {
+    // 1. Find the inner card
+    const card = colElement.querySelector('.ticket-card');
     
-    // Refresh buttons (Simple way: reload page or replace HTML, but let's just reload for simplicity in this demo)
-    // In a real app, we would manipulate the DOM to hide the "Start Cooking" button.
-    window.location.reload(); 
+    // 2. Remove old status class, add new one
+    card.classList.remove('status-pending');
+    card.classList.add('status-preparing');
+
+    // 3. Update the Button
+    const btn = colElement.querySelector('button');
+    btn.className = 'btn btn-success btn-action';
+    btn.innerText = 'Mark Ready';
+    
+    // 4. Update the onclick attribute to point to 'completed' next
+    btn.setAttribute('onclick', `updateStatus(${id}, 'completed')`);
 }
 
-// 4. Load History (Last 50 completed)
+// History Logic
 function loadHistory() {
     fetch('/api/orders/history')
         .then(res => res.json())
         .then(orders => {
             const tbody = document.getElementById('history-table');
             tbody.innerHTML = '';
-
             orders.forEach(order => {
-                const date = new Date(order.created_at).toLocaleTimeString();
                 const row = `
                     <tr>
                         <td>${order.id}</td>
-                        <td>${date}</td>
+                        <td>${new Date(order.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
                         <td>${order.customer_name}</td>
                         <td><small>${order.items_summary}</small></td>
                         <td><span class="badge bg-success">Completed</span></td>
