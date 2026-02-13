@@ -229,6 +229,29 @@
         </div>
     </div>
 
+    <!-- ARCHIVE CONFIRMATION MODAL -->
+    <div class="modal fade" id="archiveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning-subtle text-warning-emphasis">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Cannot Delete Item
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>This product has sales history!</strong></p>
+                    <p>Deleting it would break your sales reports. Do you want to <strong>Archive (Hide)</strong> it instead?</p> 
+                    <p class="text-muted small">It will be hidden from the Cashier but remain in reports.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning fw-bold" id="btnConfirmArchive">Yes, Archive It</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script src="admin.js"></script>

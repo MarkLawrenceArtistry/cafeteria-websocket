@@ -4,7 +4,8 @@ let products = [];
 
 // 1. Load Products on Startup
 document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/products')
+    // Add ?active=true to filtering query
+    fetch('/api/products?active=true') 
         .then(res => res.json())
         .then(data => {
             products = data;

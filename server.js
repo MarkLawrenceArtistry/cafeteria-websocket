@@ -40,7 +40,14 @@ io.on('connection', (socket) => {
 // PRODUCTS
 // 1. GET ALL PRODUCTS
 app.get('/api/products', (req, res) => {
-    const sql = "SELECT * FROM products";
+    // Check if the requester wants only active items (for POS)
+    const onlyActive = req.query.active === 'true';
+    
+    let sql = "SELECT * FROM products";
+    if (onlyActive) {
+        sql += " WHERE is_active = 1";
+    }
+
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json(err);
         res.json(results);
@@ -67,7 +74,16 @@ app.delete('/api/products/:id', (req, res) => {
     const { id } = req.params;
     const sql = "DELETE FROM products WHERE id = ?";
     db.query(sql, [id], (err, result) => {
-        if (err) return res.status(500).json(err);
+        if (err) {
+            // MySQL Error 1451: Cannot delete or update a parent row: a foreign key constraint fails
+            if (err.errno === 1451) {
+                return res.status(409).json({ 
+                    error: 'dependency_error', 
+                    message: 'Cannot delete product with existing sales history.' 
+                });
+            }
+            return res.status(500).json(err);
+        }
         res.json({ message: 'Product deleted!' });
     });
 });
@@ -75,10 +91,26 @@ app.delete('/api/products/:id', (req, res) => {
 // --- API ROUTES FOR UPDATING PRODUCTS (MENU EDIT) ---
 app.put('/api/products/:id', (req, res) => {
     const { id } = req.params;
-    const { name, price, category, stock_quantity } = req.body;
+    // We use COALESCE logic in SQL or check undefined in JS. 
+    // Let's pass all fields or partial updates.
+    const { name, price, category, stock_quantity, is_active } = req.body;
     
-    const sql = "UPDATE products SET name=?, price=?, category=?, stock_quantity=? WHERE id=?";
-    db.query(sql, [name, price, category, stock_quantity, id], (err, result) => {
+    // Dynamic update query to handle partial updates (like just archiving)
+    // This is a bit cleaner than hardcoding columns
+    let fields = [];
+    let values = [];
+
+    if (name !== undefined) { fields.push('name=?'); values.push(name); }
+    if (price !== undefined) { fields.push('price=?'); values.push(price); }
+    if (category !== undefined) { fields.push('category=?'); values.push(category); }
+    if (stock_quantity !== undefined) { fields.push('stock_quantity=?'); values.push(stock_quantity); }
+    if (is_active !== undefined) { fields.push('is_active=?'); values.push(is_active); }
+
+    values.push(id); // Add ID for WHERE clause
+
+    const sql = `UPDATE products SET ${fields.join(', ')} WHERE id=?`;
+
+    db.query(sql, values, (err, result) => {
         if (err) return res.status(500).json(err);
         res.json({ message: 'Product updated successfully' });
     });

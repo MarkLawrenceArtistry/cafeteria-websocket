@@ -14,25 +14,84 @@ socket.on('new_order', () => {
 
 // --- 1. MENU LOGIC ---
 function loadProducts() {
-    fetch('/api/products')
+    fetch('/api/products') // Admin sees ALL products
         .then(res => res.json())
         .then(products => {
             const tbody = document.getElementById('productTableBody');
             tbody.innerHTML = '';
+            
             products.forEach(p => {
+                // Check if item is archived (is_active = 0)
+                const isArchived = p.is_active === 0;
+
+                // Styling for archived rows
+                const rowClass = isArchived ? 'table-secondary text-muted' : '';
+                const nameDisplay = isArchived ? `<s>${p.name}</s> <span class="badge bg-secondary">Archived</span>` : `<div class="fw-bold">${p.name}</div>`;
+                
+                // Buttons: Active gets "Delete", Archived gets "Restore"
+                const deleteOrRestoreBtn = isArchived 
+                    ? `<button class="btn btn-sm btn-success" onclick="toggleArchive(${p.id}, 1)" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                    : `<button class="btn btn-sm btn-light text-danger" onclick="deleteProduct(${p.id})"><i class="bi bi-trash"></i></button>`;
+
+                const editBtn = `<button class="btn btn-sm btn-light text-primary" onclick='openEditModal(${JSON.stringify(p)})' ${isArchived ? 'disabled' : ''}><i class="bi bi-pencil"></i></button>`;
+
                 tbody.innerHTML += `
-                    <tr>
-                        <td><div class="fw-bold">${p.name}</div></td>
+                    <tr class="${rowClass}">
+                        <td>${nameDisplay}</td>
                         <td><span class="badge bg-light text-dark border">${p.category}</span></td>
                         <td>${p.stock_quantity}</td>
                         <td>$${p.price}</td>
                         <td>
-                            <button class="btn btn-sm btn-light text-primary" onclick='openEditModal(${JSON.stringify(p)})'><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-light text-danger" onclick="deleteProduct(${p.id})"><i class="bi bi-trash"></i></button>
+                            ${editBtn}
+                            ${deleteOrRestoreBtn}
                         </td>
                     </tr>`;
             });
         });
+}
+
+// 2. NEW LOGIC FOR DELETING / ARCHIVING
+let productToArchiveId = null;
+const archiveModal = new bootstrap.Modal(document.getElementById('archiveModal'));
+
+// 3. Delete Product (Handles the 409 Error)
+function deleteProduct(id) {
+    if(!confirm('Delete this item?')) return;
+
+    fetch(`/api/products/${id}`, { method: 'DELETE' })
+    .then(res => {
+        if (res.status === 409) {
+            // SUCCESS! The server told us we can't delete it.
+            // Show the Archive Modal instead.
+            productToArchiveId = id;
+            archiveModal.show();
+        } else if (res.ok) {
+            // Actually deleted (because it had no sales)
+            loadProducts();
+        } else {
+            alert('Error deleting product');
+        }
+    });
+}
+
+// 3. Handle the "Yes, Archive It" button click
+document.getElementById('btnConfirmArchive').addEventListener('click', () => {
+    if (productToArchiveId) {
+        // Send request to set is_active = 0
+        toggleArchive(productToArchiveId, 0); 
+        archiveModal.hide();
+    }
+});
+
+// 5. Helper to toggle Archive/Restore
+function toggleArchive(id, status) {
+    fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: status })
+    }).then(() => {
+        loadProducts(); // Refresh table
+    });
 }
 
 document.getElementById('addProductForm').addEventListener('submit', (e) => {
