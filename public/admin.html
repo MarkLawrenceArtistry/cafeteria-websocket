@@ -3,95 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafeteria Admin Dashboard</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- PDF Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <title>Admin Dashboard</title>
+    <!-- LOCAL ASSETS -->
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
     
+    <script src="assets/js/jspdf.umd.min.js"></script>
+    <script src="assets/js/jspdf.plugin.autotable.min.js"></script>
+    <script src="auth.js"></script>
+
     <style>
-        :root {
-            --primary-color: #6C5DD3; /* The Purple from your image */
-            --bg-color: #F3F4F6;
-            --sidebar-width: 250px;
-        }
-        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; }
-        
-        /* Sidebar Styling */
+        /* Responsive Layout Adjustments */
         .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            position: fixed;
-            top: 0; left: 0;
-            background: white;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #e0e0e0;
+            width: 250px; height: 100vh; position: fixed; top: 0; left: 0;
+            background: white; border-right: 1px solid #e0e0e0; z-index: 1045;
+            padding: 20px; display: flex; flex-direction: column;
+            transition: transform 0.3s ease-in-out;
         }
-        .brand { font-size: 24px; font-weight: bold; color: var(--primary-color); margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+
+        .main-content {
+            margin-left: 0; padding: 20px;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        /* Desktop State */
+        @media (min-width: 992px) {
+            .main-content { margin-left: 250px; padding: 30px; }
+            .sidebar { transform: none !important; visibility: visible !important; }
+        }
+
         .nav-link {
-            color: #808191;
-            font-weight: 500;
-            padding: 12px 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex; align-items: center; gap: 15px;
-            transition: all 0.3s;
+            color: #808191; font-weight: 500; padding: 12px 15px;
+            border-radius: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 15px;
         }
         .nav-link:hover { background-color: #f8f8fa; color: var(--primary-color); }
         .nav-link.active { background-color: var(--primary-color); color: white; }
-        .nav-link i { font-size: 1.2rem; }
-
-        /* Main Content Styling */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 30px;
-        }
         
-        /* Card Styling */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            border: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-        }
-        .stats-value { font-size: 28px; font-weight: bold; color: #11142d; }
-        .stats-label { color: #808191; font-size: 14px; }
+        .stats-card { background: white; border-radius: 16px; padding: 20px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.02); margin-bottom: 20px; }
         
-        /* Table Styling */
-        .custom-table thead th { 
-            background-color: #f8f8fa; 
-            color: #808191; 
-            font-weight: 600; 
-            border: none; 
-        }
-        .custom-table tbody td { 
-            vertical-align: middle; 
-            border-bottom: 1px solid #f0f0f0; 
-            padding: 15px; 
-        }
-
-        /* Utilities */
-        .btn-primary { background-color: var(--primary-color); border: none; }
-        .btn-primary:hover { background-color: #5b4ec2; }
-        .section-view { display: none; } /* Hide all sections by default */
-        .section-view.active { display: block; } /* Show active section */
+        .section-view { display: none; }
+        .section-view.active { display: block; }
     </style>
-    <script src="auth.js"></script>
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="brand">
-            <i class="bi bi-shop-window"></i> BytesCafe
+    <!-- MOBILE NAVBAR -->
+    <nav class="navbar navbar-light bg-white border-bottom d-lg-none sticky-top px-3">
+        <button class="btn btn-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+        <span class="fw-bold text-primary">Admin Panel</span>
+        <img src="https://ui-avatars.com/api/?name=Admin" class="rounded-circle" width="35">
+    </nav>
+
+    <!-- SIDEBAR (Offcanvas on Mobile) -->
+    <div class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sidebarMenu">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="fs-4 fw-bold text-primary"><i class="bi bi-shop-window"></i> BytesCafe</div>
+            <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu"></button>
         </div>
-        <nav class="nav flex-column">
+        
+        <nav class="nav flex-column flex-grow-1">
             <a href="#" class="nav-link active" onclick="showSection('dashboard', this)">
                 <i class="bi bi-grid"></i> Dashboard
             </a>
@@ -107,102 +80,80 @@
         </nav>
         
         <div class="mt-auto">
-            <button class="btn btn-outline-danger w-100" onclick="logout()">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </button>
+            <button class="btn btn-outline-danger w-100" onclick="logout()">Logout</button>
         </div>
     </div>
 
     <!-- MAIN CONTENT -->
     <div class="main-content">
-        
-        <!-- HEADER -->
-        <div class="d-flex justify-content-between align-items-center mb-5">
-            <h3 class="fw-bold">Overview</h3>
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-muted">Admin</span>
-                <img src="https://ui-avatars.com/api/?name=Admin&background=6C5DD3&color=fff" class="rounded-circle" width="40">
-            </div>
-        </div>
-
-        <!-- 1. DASHBOARD OVERVIEW SECTION -->
+        <!-- Dashboard Content (Same as before, just responsive grid classes work automatically) -->
         <div id="dashboard" class="section-view active">
-            <div class="row mb-4">
-                <div class="col-md-6">
+            <h3 class="fw-bold mb-4">Dashboard</h3>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-6">
                     <div class="stats-card">
-                        <div class="d-flex align-items-center gap-3 mb-2">
-                            <div class="p-2 bg-light rounded text-primary"><i class="bi bi-currency-dollar"></i></div>
-                            <span class="stats-label">Total Revenue</span>
-                        </div>
-                        <div class="stats-value" id="dashRevenue">$0.00</div>
+                        <small class="text-muted">Revenue</small>
+                        <div class="fs-2 fw-bold" id="dashRevenue">$0.00</div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="stats-card">
-                        <div class="d-flex align-items-center gap-3 mb-2">
-                            <div class="p-2 bg-light rounded text-success"><i class="bi bi-bag-check"></i></div>
-                            <span class="stats-label">Total Orders</span>
-                        </div>
-                        <div class="stats-value" id="dashOrders">0</div>
+                        <small class="text-muted">Total Orders</small>
+                        <div class="fs-2 fw-bold" id="dashOrders">0</div>
                     </div>
                 </div>
             </div>
-            <!-- Recent Orders in Dashboard -->
-            <div class="stats-card">
-                <h5 class="mb-4">Recent Activity</h5>
-                <table class="table custom-table">
+            <div class="stats-card overflow-auto">
+                <h5 class="mb-3">Recent Activity</h5>
+                <table class="table custom-table" style="min-width: 500px;"> <!-- Prevent squishing -->
                     <thead><tr><th>ID</th><th>Customer</th><th>Date</th><th>Amount</th></tr></thead>
                     <tbody id="dashboardRecentTable"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 2. MENU MANAGEMENT SECTION -->
+        <!-- Menu Section -->
         <div id="menu" class="section-view">
-            <div class="d-flex justify-content-between mb-4">
-                <h4>Menu Items</h4>
-                <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#addProdCollapse">+ Add Product</button>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="m-0">Menu</h4>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#addProdCollapse">+ Add</button>
             </div>
-
-            <!-- Add Product Form (Collapsed) -->
+            
             <div class="collapse mb-4" id="addProdCollapse">
-                <div class="stats-card p-4">
+                <div class="stats-card">
                     <form id="addProductForm">
-                        <div class="row g-3">
-                            <div class="col-md-4"><input type="text" id="pName" class="form-control" placeholder="Product Name" required></div>
-                            <div class="col-md-2"><input type="number" id="pStock" class="form-control" placeholder="Stock" required></div>
-                            <div class="col-md-2"><input type="number" id="pPrice" class="form-control" placeholder="Price" step="0.01" required></div>
-                            <div class="col-md-2">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4"><input type="text" id="pName" class="form-control" placeholder="Name" required></div>
+                            <div class="col-6 col-md-2"><input type="number" id="pStock" class="form-control" placeholder="Stock"></div>
+                            <div class="col-6 col-md-2"><input type="number" id="pPrice" class="form-control" placeholder="Price" step="0.01"></div>
+                            <div class="col-12 col-md-2">
                                 <select id="pCategory" class="form-select">
                                     <option value="Food">Food</option>
                                     <option value="Drink">Drink</option>
                                     <option value="Snack">Snack</option>
                                 </select>
                             </div>
-                            <div class="col-md-2"><button type="submit" class="btn btn-success w-100">Save</button></div>
+                            <div class="col-12 col-md-2"><button type="submit" class="btn btn-success w-100">Save</button></div>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div class="stats-card">
-                <table class="table custom-table">
-                    <thead><tr><th>Name</th><th>Category</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
+            <div class="stats-card overflow-auto">
+                <table class="table" style="min-width: 600px;">
+                    <thead><tr><th>Name</th><th>Cat</th><th>Stock</th><th>Price</th><th>Action</th></tr></thead>
                     <tbody id="productTableBody"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 3. USER MANAGEMENT SECTION -->
+        <!-- Users Section -->
         <div id="users" class="section-view">
-            <div class="d-flex justify-content-between mb-4">
-                <h4>Staff Management</h4>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="stats-card mb-4">
-                        <h6 class="mb-3">Add New User</h6>
+            <h4 class="mb-4">Staff</h4>
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <div class="stats-card">
+                        <h6>Add User</h6>
                         <form id="addUserForm">
                             <input type="text" id="uName" class="form-control mb-2" placeholder="Username" required>
                             <input type="password" id="uPass" class="form-control mb-2" placeholder="Password" required>
@@ -211,14 +162,14 @@
                                 <option value="kitchen">Kitchen</option>
                                 <option value="admin">Admin</option>
                             </select>
-                            <button type="submit" class="btn btn-primary w-100">Create User</button>
+                            <button type="submit" class="btn btn-primary w-100">Create</button>
                         </form>
                     </div>
                 </div>
-                <div class="col-md-8">
-                    <div class="stats-card">
-                        <table class="table custom-table">
-                            <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
+                <div class="col-12 col-md-8">
+                    <div class="stats-card overflow-auto">
+                        <table class="table" style="min-width: 500px;">
+                            <thead><tr><th>Username</th><th>Role</th><th>Action</th></tr></thead>
                             <tbody id="usersTableBody"></tbody>
                         </table>
                     </div>
@@ -226,46 +177,51 @@
             </div>
         </div>
 
-        <!-- 4. REPORTS SECTION (With PDF) -->
+        <!-- Reports Section -->
         <div id="reports" class="section-view">
-            <div class="d-flex justify-content-between mb-4">
-                <h4>Sales Reports</h4>
-                <!-- PDF BUTTON -->
-                <button class="btn btn-outline-primary" onclick="downloadPDF()">
-                    <i class="bi bi-file-earmark-pdf"></i> Download PDF
-                </button>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="m-0">Reports</h4>
+                <button class="btn btn-outline-primary btn-sm" onclick="downloadPDF()"><i class="bi bi-download"></i> PDF</button>
             </div>
-            <div class="stats-card">
-                <table class="table custom-table" id="reportTableForPDF">
+            <div class="stats-card overflow-auto">
+                <table class="table" id="reportTableForPDF" style="min-width: 500px;">
                     <thead><tr><th>ID</th><th>Customer</th><th>Date</th><th>Amount</th></tr></thead>
                     <tbody id="reportsTableBody"></tbody>
                 </table>
             </div>
         </div>
-
     </div>
 
-    <!-- EDIT MODAL (Hidden) -->
+    <!-- Modals (Edit Product/User) - Same structure as before, just ensure ID matches JS -->
+    <!-- EDIT PRODUCT MODAL -->
     <div class="modal fade" id="editProductModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Product</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <div class="modal-header"><h5 class="modal-title">Edit Product</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <form id="editProductForm">
                         <input type="hidden" id="edit-id">
-                        <div class="mb-3"><label>Name</label><input type="text" id="edit-name" class="form-control" required></div>
-                        <div class="mb-3"><label>Price</label><input type="number" id="edit-price" class="form-control" step="0.01" required></div>
-                        <div class="mb-3"><label>Stock</label><input type="number" id="edit-stock" class="form-control" required></div>
-                        <div class="mb-3"><label>Category</label>
-                            <select id="edit-category" class="form-select">
-                                <option value="Food">Food</option>
-                                <option value="Drink">Drink</option>
-                                <option value="Snack">Snack</option>
-                            </select>
-                        </div>
+                        <div class="mb-2"><label>Name</label><input type="text" id="edit-name" class="form-control"></div>
+                        <div class="mb-2"><label>Price</label><input type="number" id="edit-price" class="form-control" step="0.01"></div>
+                        <div class="mb-2"><label>Stock</label><input type="number" id="edit-stock" class="form-control"></div>
+                        <div class="mb-3"><label>Category</label><select id="edit-category" class="form-select"><option value="Food">Food</option><option value="Drink">Drink</option><option value="Snack">Snack</option></select></div>
+                        <button type="submit" class="btn btn-primary w-100">Update</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EDIT USER MODAL -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Edit User</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="edit-user-id">
+                        <div class="mb-2"><label>Username</label><input type="text" id="edit-user-name" class="form-control"></div>
+                        <div class="mb-3"><label>Role</label><select id="edit-user-role" class="form-select"><option value="cashier">Cashier</option><option value="kitchen">Kitchen</option><option value="admin">Admin</option></select></div>
                         <button type="submit" class="btn btn-primary w-100">Update</button>
                     </form>
                 </div>
@@ -273,61 +229,27 @@
         </div>
     </div>
 
-    <!-- EDIT USER MODAL -->
-    <div class="modal fade" id="editUserModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editUserForm">
-                        <input type="hidden" id="edit-user-id">
-                        <div class="mb-3">
-                            <label>Username</label>
-                            <input type="text" id="edit-user-name" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label>Role</label>
-                            <select id="edit-user-role" class="form-select">
-                                <option value="cashier">Cashier</option>
-                                <option value="kitchen">Kitchen</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Update User</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script src="admin.js"></script>
     <script>
-        // Simple function to switch sidebar tabs
         function showSection(id, linkElement) {
-            // Hide all sections
             document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
-            // Show target section
             document.getElementById(id).classList.add('active');
             
-            // Update Sidebar Active State
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
             linkElement.classList.add('active');
+            
+            // Auto close sidebar on mobile when clicked
+            const sidebar = document.getElementById('sidebarMenu');
+            const bsOffcanvas = bootstrap.Offcanvas.getInstance(sidebar);
+            if(bsOffcanvas && window.innerWidth < 992) bsOffcanvas.hide();
 
-            // Trigger data load
             if(id === 'menu') loadProducts();
             if(id === 'users') loadUsers();
             if(id === 'reports' || id === 'dashboard') loadReports();
         }
-
-        function logout() {
-            sessionStorage.removeItem('user');
-            window.location.href = 'login.html';
-        }
+        function logout() { sessionStorage.removeItem('user'); window.location.href = 'login.html'; }
     </script>
 </body>
 </html>

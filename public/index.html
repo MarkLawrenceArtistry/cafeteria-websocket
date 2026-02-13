@@ -2,102 +2,159 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Critical for Mobile -->
     <title>Cashier POS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- LOCAL ASSETS -->
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
+    
     <script src="auth.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="assets/js/jspdf.umd.min.js"></script>
+    
     <style>
-        :root { --primary-color: #6C5DD3; --bg-color: #F3F4F6; }
-        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        /* POS SPECIFIC STYLES */
+        body { overflow: hidden; /* Prevent body scroll, handle internally */ }
         
-        /* Layout */
-        .sidebar {
-            width: 80px; height: 100vh; position: fixed; background: white;
-            display: flex; flex-direction: column; align-items: center; padding-top: 20px;
-            border-right: 1px solid #eee;
+        /* Layout Grid */
+        .pos-container { display: flex; height: 100vh; flex-direction: column; }
+        
+        /* Category Nav - Responsive */
+        .category-nav {
+            background: white; border-bottom: 1px solid #eee; padding: 10px;
+            display: flex; gap: 10px; overflow-x: auto; white-space: nowrap;
         }
-        .main-area { margin-left: 80px; margin-right: 350px; padding: 30px; height: 100vh; overflow-y: auto; }
-        .cart-sidebar {
-            width: 350px; height: 100vh; position: fixed; right: 0; top: 0;
+        
+        /* Desktop Layout Override */
+        @media (min-width: 992px) {
+            .pos-container { flex-direction: row; }
+            .category-nav {
+                flex-direction: column; width: 80px; border-right: 1px solid #eee; 
+                border-bottom: none; height: 100vh; padding-top: 20px; align-items: center;
+            }
+        }
+
+        .nav-icon {
+            width: 50px; height: 50px; min-width: 50px; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center;
+            color: #808191; font-size: 1.5rem; transition: 0.3s; cursor: pointer;
+        }
+        .nav-icon.active, .nav-icon:hover { 
+            background-color: var(--primary-color); color: white; 
+        }
+
+        /* Main Area */
+        .main-area { flex: 1; padding: 20px; overflow-y: auto; background: var(--bg-color); }
+
+        /* Product Card */
+        .product-card {
+            background: white; border-radius: 16px; border: none; cursor: pointer; transition: 0.2s;
+        }
+        .product-card:active { transform: scale(0.98); }
+        .product-img-placeholder { 
+            height: 100px; background: #e9ecef; display: flex; 
+            align-items: center; justify-content: center; color: #adb5bd; 
+        }
+
+        /* Cart - Desktop: Fixed Right / Mobile: Offcanvas */
+        .cart-section {
             background: white; border-left: 1px solid #eee; display: flex; flex-direction: column;
         }
-
-        /* Nav Icons */
-        .nav-icon {
-            width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            color: #808191; font-size: 1.5rem; margin-bottom: 20px; transition: 0.3s; cursor: pointer;
+        @media (min-width: 992px) {
+            .cart-section { width: 350px; height: 100vh; }
         }
-        .nav-icon.active, .nav-icon:hover { background-color: var(--primary-color); color: white; shadow: 0 4px 10px rgba(108, 93, 211, 0.3); }
-
-        /* Product Cards */
-        .product-card {
-            background: white; border-radius: 16px; border: none; transition: 0.2s;
-            cursor: pointer; overflow: hidden;
-        }
-        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-        .product-img-placeholder { height: 120px; background: #e9ecef; display: flex; align-items: center; justify-content: center; color: #adb5bd; }
         
-        /* Cart */
-        .cart-items { flex-grow: 1; overflow-y: auto; padding: 20px; }
-        .cart-footer { padding: 20px; background: #f8f9fa; border-top: 1px solid #eee; }
-        .checkout-btn { background: var(--primary-color); border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; color: white; }
-        .checkout-btn:disabled { background: #ccc; }
+        /* Mobile Cart Floating Button (Visible only on mobile) */
+        .fab-cart {
+            position: fixed; bottom: 20px; right: 20px; 
+            background: var(--primary-color); color: white;
+            width: 60px; height: 60px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(108, 93, 211, 0.4);
+            z-index: 1000; font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <div class="nav-icon active"><i class="bi bi-grid-fill"></i></div>
-        <div class="nav-icon" onclick="filterCategory('Food')"><i class="bi bi-egg-fried"></i></div>
-        <div class="nav-icon" onclick="filterCategory('Drink')"><i class="bi bi-cup-straw"></i></div>
-        <div class="nav-icon" onclick="filterCategory('Snack')"><i class="bi bi-cookie"></i></div>
-        <div class="mt-auto mb-3 nav-icon text-danger" onclick="logout()"><i class="bi bi-box-arrow-right"></i></div>
-    </div>
-
-    <!-- MAIN AREA -->
-    <div class="main-area">
-        <h3 class="fw-bold mb-4">Choose Order</h3>
-        <div id="product-list" class="row g-3">
-            <!-- Products injected here -->
-        </div>
-    </div>
-
-    <!-- CART SIDEBAR -->
-    <div class="cart-sidebar shadow-sm">
-        <div class="p-4 border-bottom">
-            <h4 class="fw-bold m-0">Current Order</h4>
-            <input type="text" id="customerName" class="form-control mt-3 border-0 bg-light" placeholder="Customer Name (Optional)">
-        </div>
+    <div class="pos-container">
         
-        <div class="cart-items" id="cart-items">
-            <!-- Cart items injected here -->
-            <div class="text-center text-muted mt-5">
-                <i class="bi bi-basket3 fs-1"></i>
-                <p>Cart is empty</p>
+        <!-- MOBILE HEADER (Visible < 992px) -->
+        <div class="d-lg-none bg-white p-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="m-0 fw-bold text-primary">BytesCafe</h5>
+            <button class="btn btn-sm btn-outline-danger" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+
+        <!-- NAVIGATION (Categories) -->
+        <div class="category-nav scroll-hide">
+            <div class="nav-icon active" onclick="filterCategory('')" title="All"><i class="bi bi-grid-fill"></i></div>
+            <div class="nav-icon" onclick="filterCategory('Food')" title="Food"><i class="bi bi-egg-fried"></i></div>
+            <div class="nav-icon" onclick="filterCategory('Drink')" title="Drinks"><i class="bi bi-cup-straw"></i></div>
+            <div class="nav-icon" onclick="filterCategory('Snack')" title="Snacks"><i class="bi bi-cookie"></i></div>
+            
+            <!-- Desktop Logout -->
+            <div class="mt-auto mb-3 nav-icon text-danger d-none d-lg-flex" onclick="logout()"><i class="bi bi-box-arrow-right"></i></div>
+        </div>
+
+        <!-- MAIN PRODUCT AREA -->
+        <div class="main-area">
+            <h4 class="fw-bold mb-3">Menu</h4>
+            <div id="product-list" class="row g-2 g-md-3">
+                <!-- Products injected by JS -->
+            </div>
+            <!-- Spacer for mobile FAB -->
+            <div class="d-lg-none" style="height: 80px;"></div>
+        </div>
+
+        <!-- CART SECTION (Offcanvas on Mobile, Static on Desktop) -->
+        <!-- We use standard bootstrap offcanvas classes but force it to be always shown on desktop via custom CSS/structure -->
+        
+        <!-- Mobile Trigger Button -->
+        <div class="fab-cart d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+            <i class="bi bi-basket2"></i>
+        </div>
+
+        <!-- Cart Container -->
+        <div class="offcanvas-lg offcanvas-end cart-section" tabindex="-1" id="cartOffcanvas">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title fw-bold">Current Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#cartOffcanvas"></button>
+            </div>
+            
+            <!-- Desktop Header equivalent -->
+            <div class="p-3 border-bottom d-none d-lg-block">
+                <h4 class="fw-bold m-0">Current Order</h4>
+            </div>
+
+            <div class="p-3 bg-light">
+                 <input type="text" id="customerName" class="form-control border-0" placeholder="Customer Name (Optional)">
+            </div>
+            
+            <div class="flex-grow-1 overflow-auto p-3" id="cart-items">
+                <!-- Cart Items -->
+            </div>
+
+            <div class="p-3 bg-light border-top">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Total</span>
+                    <span class="fw-bold fs-4" id="cart-total">$0.00</span>
+                </div>
+                <button id="btn-checkout" class="btn btn-primary w-100 py-3 fw-bold rounded-3" disabled>
+                    Charge Payment
+                </button>
             </div>
         </div>
 
-        <div class="cart-footer">
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Subtotal</span>
-                <span class="fw-bold" id="cart-total">$0.00</span>
-            </div>
-            <button id="btn-checkout" class="checkout-btn" disabled>
-                Charge Payment
-            </button>
-        </div>
     </div>
 
     <!-- RECEIPT MODAL -->
     <div class="modal fade" id="receiptModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-body p-4" id="printable-receipt">
                     <div class="text-center mb-3">
-                        <h4 class="fw-bold">Cafeteria</h4>
+                        <h4 class="fw-bold">BytesCafe</h4>
                         <p class="text-muted mb-0">Receipt</p>
                         <small id="receipt-date"></small>
                     </div>
@@ -115,21 +172,25 @@
                 </div>
                 <div class="modal-footer border-0 justify-content-center">
                     <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-outline-primary rounded-pill px-4" onclick="downloadReceiptPDF()">📥 PDF</button>
-                    <button type="button" class="btn btn-primary rounded-pill px-4" onclick="window.print()">🖨 Print</button>
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-4" onclick="downloadReceiptPDF()">PDF</button>
+                    <!-- Note: Window.print might not work well on mobile without specific CSS, prefer PDF -->
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- LOCAL SCRIPTS -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script src="app.js"></script>
     <script>
         function logout() { sessionStorage.removeItem('user'); window.location.href = 'login.html'; }
         
-        // Simple client-side filter
         function filterCategory(cat) {
+            // Update UI Active State
+            document.querySelectorAll('.nav-icon').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
             const cards = document.querySelectorAll('.col-product');
             cards.forEach(card => {
                 if (card.dataset.cat === cat || !cat) card.style.display = 'block';
